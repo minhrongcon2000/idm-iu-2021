@@ -1,2 +1,4 @@
-package arm;public class FPTree {
+package arm;
+
+public class FPTree {
 }
