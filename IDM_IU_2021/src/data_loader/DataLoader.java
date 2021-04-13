@@ -1,2 +1,4 @@
-package data_loader;public class DataLoader {
+package data_loader;
+
+public class DataLoader {
 }

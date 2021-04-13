@@ -1,2 +1,4 @@
-package classifier;public class PredictiveFPTree {
+package classifier;
+
+public class PredictiveFPTree {
 }
