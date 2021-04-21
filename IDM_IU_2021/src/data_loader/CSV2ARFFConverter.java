@@ -14,26 +14,21 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 
-
 public class CSV2ARFFConverter {
-	private static  String source_path;
-	private static String des_path;
-	private static String attr_conf;
-	private static String delimiter = ",";
-	private static int attr_num;
+	private static  String sourcePath;
+	private static String desPath;
+	private static String attrConf;
+	private static int numOfAttr;
 
-	public CSV2ARFFConverter(String source_path, String des_path, String attr_conf) throws org.json.simple.parser.ParseException, ParseException {
-		CSV2ARFFConverter.source_path = source_path;
-		CSV2ARFFConverter.des_path = des_path;
-		CSV2ARFFConverter.attr_conf = attr_conf;		
+	public CSV2ARFFConverter(String sourcePath, String desPath, String attrConf) throws ParseException, ParseException, org.json.simple.parser.ParseException {
+		CSV2ARFFConverter.sourcePath = sourcePath;
+		CSV2ARFFConverter.desPath = desPath;
+		CSV2ARFFConverter.attrConf = attrConf;		
 		getAttrNum();			
 	}
-
-
-
 	public static int getNumLines() throws IOException {
 		try {
-			BufferedReader br = new BufferedReader(new FileReader(source_path));
+			BufferedReader br = new BufferedReader(new FileReader(sourcePath));
 			int count = 0;
 			while(br.readLine() != null) {
 				count++;
@@ -45,10 +40,11 @@ public class CSV2ARFFConverter {
 		}
 		return -1;
 	}
+
 	public static void getAttrNum() throws org.json.simple.parser.ParseException, ParseException {
 		try {
-			JSONArray attr = (JSONArray) new JSONParser().parse(new FileReader(attr_conf));
-			CSV2ARFFConverter.attr_num = attr.size();			
+			JSONArray attr = (JSONArray) new JSONParser().parse(new FileReader(attrConf));
+			CSV2ARFFConverter.numOfAttr = attr.size();			
 		} catch (IOException e) {
 			e.printStackTrace();
 		}		
@@ -57,20 +53,21 @@ public class CSV2ARFFConverter {
 	public static boolean isDataAttributeConsistent() {
 		boolean isConsistent = true;
 		try {
-			CSVReader csvReader = new CSVReader(new FileReader(source_path));
+			CSVReader csvReader = new CSVReader(new FileReader(sourcePath));
 			String[] nextRecord;
 			//Skip column names
 			nextRecord = csvReader.readNext();
 			int count = 1;
 			while ((nextRecord = csvReader.readNext()) != null) {
 				count++;
-				if (nextRecord.length != attr_num)
+				if (nextRecord.length != numOfAttr)
 				{					
 					System.out.println("Inconsistent data at line " + count +"\n");
 					isConsistent = false;
 					break;
 				}	
 			}
+			csvReader.close();
 		}catch(IOException e){
 			e.printStackTrace();
 
@@ -78,73 +75,54 @@ public class CSV2ARFFConverter {
 		return isConsistent;
 	}
 
-
-	public static ArrayList<AttrObj> getAttr() throws FileNotFoundException, IOException, ParseException {
+	public static ArrayList<AttrObj> getAttrList() throws FileNotFoundException, IOException, ParseException {
 		try {
-			JSONArray attr_json = (JSONArray) new JSONParser().parse(new FileReader(attr_conf));
-			ArrayList<AttrObj> attr_list=new ArrayList<AttrObj>();  
-			for (int i = 0; i < attr_json.size(); i++) {
-				JSONObject o = (JSONObject) attr_json.get(i);				
-				JSONArray labels = (JSONArray) o.get("labels");				
-				
+			JSONArray attrJson = (JSONArray) new JSONParser().parse(new FileReader(attrConf));
+			ArrayList<AttrObj> attrList=new ArrayList<AttrObj>();  
+			for (int i = 0; i < attrJson.size(); i++) {
+				JSONObject o = (JSONObject) attrJson.get(i);				
+				JSONArray labels = (JSONArray) o.get("labels");	
 				if (labels != null) {
 					ArrayList<String> temp = new ArrayList<String>();
-					Iterator l = labels.iterator();					
+					Iterator<?> l = labels.iterator();					
 					while (l.hasNext()) {
 						temp.add((String) l.next());
 					}
-					
-					AttrObj attr_obj = new AttrObj((String)o.get("name"), (String)o.get("type"), temp);
-					attr_list.add(attr_obj);
-										
+					AttrObj attrObj = new AttrObj((String)o.get("name"), (String)o.get("type"), temp);
+					attrList.add(attrObj);
 				}
 				else {
-					AttrObj attr_obj = new AttrObj((String)o.get("name"), (String)o.get("type"));
-					attr_list.add(attr_obj);	
+					AttrObj attrObj = new AttrObj((String)o.get("name"), (String)o.get("type"));
+					attrList.add(attrObj);	
 				}			
 			}
-			return(attr_list);
+			return(attrList);
 		}catch(Exception e){
 			e.fillInStackTrace();
 		}
 		return null;
 	}
-	
-	public void convert(String relationName, HashMap<String, String> timeInputFormat, String timeOutputFormat) {
+
+	public static void convert(String relationName, HashMap<String, String> timeInputFormat, String timeOutputFormat) {
 		try {
-			CSVReader reader = new CSVReader(new FileReader(source_path));
-			BufferedWriter bw = new BufferedWriter(new FileWriter(des_path));
+			CSVReader reader = new CSVReader(new FileReader(sourcePath));
+			BufferedWriter bw = new BufferedWriter(new FileWriter(desPath));
 			//Write Header
 			bw.write("@relation " + relationName + "\n\n");
-			ArrayList<AttrObj> attr_list = getAttr();
-			//System.out.println(attr_list);
-			for (int i = 0; i < attr_list.size(); i++) {				
-				if (!attr_list.get(i).getType().contentEquals("nominal")) {
-					bw.write("@attribute " + attr_list.get(i).getName() + " " + attr_list.get(i).getType());
-				}else {
-					bw.write("@attribute " + attr_list.get(i).getName() + " "); 
-					bw.write("{");
-					//+ attr_list.get(i).getLabels());
-					//ArrayList<String> labels = attr_list.get(i).getLabels();
-					ListIterator<String> label = attr_list.get(i).getLabels().listIterator();
-					while (label.hasNext()) {
-						if (label.hasPrevious()) {
-							bw.write(",");
-						}
-						bw.write("\""+label.next()+"\"");
-						
-					}
-					bw.write("}");
-				}				
+			ArrayList<AttrObj> attrList = getAttrList();
+			for (int i = 0; i < attrList.size(); i++) {				
+				String s = formatHeader(attrList.get(i));
+				bw.write(s);
 				bw.newLine();
 			}
+			bw.newLine();
 			//Write Data
 			bw.write("@data\n");			
 			String[] nextLine;
 			//skip Header
 			reader.readNext();
-;			while ((nextLine = reader.readNext()) != null) {
-				String s = formatData(nextLine, attr_list, timeInputFormat, timeOutputFormat);
+			while ((nextLine = reader.readNext()) != null) {
+				String s = formatData(nextLine, attrList, timeInputFormat, timeOutputFormat);
 				bw.write(s);
 				bw.newLine();				
 			}						
@@ -155,41 +133,65 @@ public class CSV2ARFFConverter {
 			e.fillInStackTrace();
 		}
 	}
-	
-	public static String  formatData(String[] dataLine, ArrayList<AttrObj> attrList,HashMap<String, String> timeInputFormat, String timeOutputFormat) throws ParseException {
-		StringBuilder formattedData = new StringBuilder();
-		if (dataLine.length==attr_num) {			
-			for (int i = 0; i < dataLine.length; i++) {				
-				if(dataLine[i].isBlank()) {
-					 formattedData.append("?");
-				}else {					
-					if(attrList.get(i).getType().contentEquals("numeric")) {
-						formattedData.append(dataLine[i]);				
-				}else {
-					//"date "+ timeInputFormat
-					if (attrList.get(i).getType().contentEquals(new StringBuilder("date \"dd-MM-yy HH:mm\""))){
-						Pattern p = Pattern.compile("^\\d{1,4}([-/])\\d{1,4}([-/])\\d{1,4}\\s+\\d{1,2}([:-])\\d{1,2}|\\d{1,2}([:-])\\d{1,2}([:-])\\d{1,2}");
-						Matcher m = p.matcher(dataLine[i]);
-						m.find();
-						formattedData.append("\"");						
-						formattedData.append(convertTimeFormat(dataLine[i], timeInputFormat.get(m.group(1)), timeOutputFormat));
-						formattedData.append("\"");
-				}else {	//type String or Nominal						
-						dataLine[i] = dataLine[i].replace("\"","");						
-						formattedData.append("\"");
-						formattedData.append(dataLine[i]);
-						formattedData.append("\"");
-					}					
+
+	public static String formatHeader(AttrObj attr) {
+		StringBuilder formattedHeader = new StringBuilder();
+		if (!attr.getType().contentEquals("nominal")) {
+			formattedHeader.append("@attribute " + attr.getName() + " " + attr.getType());
+		}else {
+			formattedHeader.append("@attribute " + attr.getName() + " "); 
+			formattedHeader.append("{");
+			ListIterator<String> label = attr.getLabels().listIterator();			
+			while (label.hasNext()) {
+				if (label.hasPrevious()) {
+					formattedHeader.append(",");
 				}
-				
+				formattedHeader.append("\""+label.next()+"\"");
+
 			}
-				if (i!=(dataLine.length-1)) {
+			formattedHeader.append("}");
+		}
+		return formattedHeader.toString();
+	}
+
+	public static String formatData(String[] dataLine, ArrayList<AttrObj> attrList,HashMap<String, String> timeInputFormat, String timeOutputFormat) throws ParseException {
+		StringBuilder formattedData = new StringBuilder();
+		if (dataLine.length==numOfAttr) {	
+			for (int i = 0; i < dataLine.length; i++) {
+				if (i!=0) {
 					formattedData.append(",");
+				}// empty attribute
+				if(dataLine[i].isBlank()) {
+					formattedData.append("?");					
+				}
+				else {
+					if(attrList.get(i).getType().contentEquals("numeric")) {
+						formattedData.append(dataLine[i]);			
+					}
+					else {
+						if (attrList.get(i).getType().contains("date")){
+							//"date "+ timeInputFormat					
+							Pattern p = Pattern.compile("^\\d{1,4}([-/])\\d{1,4}([-/])\\d{1,4}\\s+\\d{1,2}([:-])\\d{1,2}|\\d{1,2}([:-])\\d{1,2}([:-])\\d{1,2}");
+							Matcher m = p.matcher(dataLine[i]);
+							m.find();
+							formattedData.append("\"");						
+							formattedData.append(convertTimeFormat(dataLine[i], timeInputFormat.get(m.group(1)), timeOutputFormat));
+							formattedData.append("\"");
+						}
+						else {	//type String or Nominal		
+							//remove quote in string
+							dataLine[i] = dataLine[i].replace("\""," ");						
+							formattedData.append("\"");
+							formattedData.append(dataLine[i]);
+							formattedData.append("\"");
+						}		
+					}						
 				}
 			}
 		}
 		return formattedData.toString();
 	}
+
 	public static String convertTimeFormat(String dt, String inputFormat, String outputFormat) throws ParseException{
 		String r = null;
 		try {
@@ -238,6 +240,18 @@ public class CSV2ARFFConverter {
 		public String toString() {
 			return "AttrObj [name=" + name + ", type=" + type + ", labels=" + labels + "]\n";
 		}		
-	}	
+	}
+	/* Run converter example
+	 * 
+	 public static void main(String[] args) throws IOException, ParseException, Exception {
+		// TODO Auto-generated method stub
+		CSV2ARFFConverter c = new CSV2ARFFConverter("..\\new\\data.csv", "data_1.arff", "..\\new\\datatype.json");
+		HashMap<String,String> timeInputFormat = new HashMap<String, String>();
+		timeInputFormat.put("/", "dd/MM/yy HH:mm");
+		timeInputFormat.put("-", "dd-MM-yy HH:mm");
+		convert("wekadata", timeInputFormat, "dd-MM-yy KK:mma");
+	}	 
+	 * 
+	 */
 }
 
