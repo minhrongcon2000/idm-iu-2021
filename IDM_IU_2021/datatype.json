@@ -17,7 +17,7 @@
     },
     {
         "name": "InvoiceDate",
-        "type": "date \"dd-MM-yy HH:mm\""
+        "type": "date"
     },
     {
         "name": "UnitPrice",
