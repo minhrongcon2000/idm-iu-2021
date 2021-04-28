@@ -4,6 +4,8 @@ import weka.core.*;
 import weka.core.converters.ConverterUtils.DataSource;
 import weka.core.converters.ConverterUtils.DataSink;
 import weka.core.Instances;
+
+import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import org.javatuples.*;
@@ -17,38 +19,25 @@ public class RFM {
     private final int numberOfAttributes = cleanedData.numAttributes();
     private final int numberOfInstances = cleanedData.numInstances();
     private final SimpleDateFormat dateFormat = new SimpleDateFormat("dd-MM-yy HH:mm");
-    Date latestDate = dateFormat.parse("09-12-2011 12:50");
+    private final DecimalFormat doubleFormat = new DecimalFormat("#.#####");
+    Date latestDate = dateFormat.parse(cleanedData.lastInstance().stringValue(4));
     private final ArrayList<Integer> recencyList = new ArrayList<>();
     private final ArrayList<Integer> frequencyList = new ArrayList<>();
     private final ArrayList<Integer> monetaryList = new ArrayList<>();
     private final HashMap<String, Quintet<Date, Integer, Integer, Double, Integer>> invoiceMap = new HashMap<>();
     private final HashMap<Integer, Pair<String, ArrayList<Integer>>> customerValues = new HashMap<>();
-    private final HashMap<Integer, ArrayList<Integer>> RFMMap = new HashMap<>();
-    private final Instances RFMTable = new Instances("RFMTable", new ArrayList<>(), RFMMap.size());
+    private final HashMap<Integer, ArrayList<Double>> RFMMap = new HashMap<>();
 
 
-    // Supporting functions
-    public Attribute[] getAttributesList() {
-        Attribute[] attributeList = new Attribute[numberOfAttributes];
-        Instance exampleInst = cleanedData.firstInstance();
-        for (int i = 0; i < numberOfAttributes; i++) {
-            Attribute attribute = exampleInst.attributeSparse(i);
-            attributeList[i] = attribute;
-        }
-        return attributeList;
+    // Constructor
+    public RFM() throws Exception {
+        generateInvoiceMap();
+        generateCustomerValues();
+        HashMap<String, Double> extremeValues = generateRFMLists();
+        generateRFMMap(extremeValues);
+        Instances rfmTable = createRFMInstance();
     }
-    public int daysFromLatestDate(Date invoiceDate){
-        long daysFromLatest = Math.abs(latestDate.getTime() - invoiceDate.getTime());
-        return (int) TimeUnit.MILLISECONDS.toDays(daysFromLatest);
-    }
-    public int minMaxScaling(int curValue, int maxValue, int minValue) {
-        int a = 1, b = 10, score;
-        score = a + ((curValue - minValue)*(b-a))/(maxValue-minValue);
-        return score;
-    }
-    public HashMap<Integer, ArrayList<Integer>> getRFMMap() {
-        return this.RFMMap;
-    }
+
 
     // Main functions
     public void generateInvoiceMap() throws Exception {
@@ -93,7 +82,7 @@ public class RFM {
                 if (invoiceDate < oldDate)
                     customerValues.get(customerId).getValue1().set(0, invoiceDate);
                 // Modify noOfInvoices
-                customerValues.get(customerId).getValue1().set(1, Math.min(currentNoOfInvoice, 10));
+                customerValues.get(customerId).getValue1().set(1, currentNoOfInvoice);
                 // Modify MonetaryValues
                 if (invoicePrice > oldPrice && invoicePrice != 0)
                     customerValues.get(customerId).getValue1().set(2, (int) invoicePrice);
@@ -105,51 +94,79 @@ public class RFM {
             }
         }
     }
-    public Integer[] generateRFMLists() {
-        // int c1 = 0, c2 = 0, c3 = 0, c4 = 0;
+    public HashMap<String, Double> generateRFMLists() {
+        double rSum = 0, fSum = 0, mSum = 0;
+        // Create the lists
         for (int customerId : customerValues.keySet()) {
             recencyList.add(customerValues.get(customerId).getValue1().get(0));
             frequencyList.add(customerValues.get(customerId).getValue1().get(1));
-            /* Counter
-            if (customerValues.get(customerId).getValue1().get(2) < 100)
-                c1 += 1;
-            else if (customerValues.get(customerId).getValue1().get(2) >= 100 && customerValues.get(customerId).getValue1().get(2) < 1000)
-                c2 += 1;
-            else if (customerValues.get(customerId).getValue1().get(2) >= 1000 && customerValues.get(customerId).getValue1().get(2) < 10000)
-                c3 += 1;
-            else
-                c4 += 1;
-             */
             monetaryList.add(customerValues.get(customerId).getValue1().get(2));
         }
-        int maxDate = 0, maxPrice = 0, minPrice = monetaryList.get(0);
-        for (int i = 0; i < monetaryList.size(); i++) {
+        // Find the maximum value in each list
+        double maxDate = 0, maxPrice = 0, minPrice = monetaryList.get(0),
+                maxInvoice = 0, minInvoice = frequencyList.get(0);
+        for (int i = 0; i < customerValues.size(); i++) {
+            // Recency List
             if (recencyList.get(i) >= maxDate)
                 maxDate = recencyList.get(i);
+            // Frequency List
+            if (recencyList.get(i) >= maxInvoice)
+                maxInvoice = frequencyList.get(i);
+            if (recencyList.get(i) <= minInvoice)
+                minInvoice = frequencyList.get(i);
+            // Monetary List
             if (monetaryList.get(i) >= maxPrice)
                 maxPrice = monetaryList.get(i);
-            if (monetaryList.get(i) <= minPrice && monetaryList.get(i) != 0)
+            if (monetaryList.get(i) <= minPrice)
                 minPrice = monetaryList.get(i);
+
+            rSum += recencyList.get(i);
+            fSum += frequencyList.get(i);
+            mSum += monetaryList.get(i);
         }
-        Integer[] maxValues = new Integer[3];
-        maxValues[0] = maxDate;
-        maxValues[1] = maxPrice;
-        maxValues[2] = minPrice;
-        return maxValues;
+        double rMean = rSum/recencyList.size();
+        double fMean = fSum/frequencyList.size();
+        double mMean = mSum/monetaryList.size();
+        // Return the values
+        HashMap<String, Double> extremeValues = new HashMap<>();
+        extremeValues.put("maxDate", maxDate);
+        extremeValues.put("maxPrice", maxPrice);
+        extremeValues.put("minPrice", minPrice);
+        extremeValues.put("maxInvoice", maxInvoice);
+        extremeValues.put("minInvoice", minInvoice);
+        extremeValues.put("rMean", rMean);
+        extremeValues.put("fMean", fMean);
+        extremeValues.put("mMean", mMean);
+        return extremeValues;
     }
-    public void generateRFMMap(Integer[] extremeValues) {
-        int maxDate = extremeValues[0], maxPrice = extremeValues[1], minPrice = extremeValues[2];
+    public void generateRFMMap(HashMap<String, Double> extremeValues) {
+        double maxDate = extremeValues.get("maxDate"),
+                maxPrice = extremeValues.get("maxPrice"),
+                minPrice = extremeValues.get("minPrice"),
+                maxInvoice = extremeValues.get("maxInvoice"),
+                minInvoice = extremeValues.get("minInvoice"),
+                rMean = extremeValues.get("rMean"),
+                fMean = extremeValues.get("fMean"),
+                mMean = extremeValues.get("mMean");
+
         for (int customerId : customerValues.keySet()) {
-            int RScore = minMaxScaling(customerValues.get(customerId).getValue1().get(0), maxDate, 0);
-            int FScore = minMaxScaling(customerValues.get(customerId).getValue1().get(1), 10, 1);
-            int MScore = minMaxScaling(customerValues.get(customerId).getValue1().get(2), maxPrice, minPrice);
+            // int RScore = minMaxNormalization(customerValues.get(customerId).getValue1().get(0), maxDate, 0);
+            // int FScore = minMaxNormalization(customerValues.get(customerId).getValue1().get(1), 10, 1);
+            // int MScore = minMaxNormalization(customerValues.get(customerId).getValue1().get(2), maxPrice, minPrice);
+            double RScore = Double.parseDouble(doubleFormat.format(
+                    meanNormalization(customerValues.get(customerId).getValue1().get(0), rMean, maxDate, 0)));
+            double FScore = Double.parseDouble(doubleFormat.format(
+                    meanNormalization(customerValues.get(customerId).getValue1().get(1), fMean, maxInvoice, minInvoice)));
+            double MScore = Double.parseDouble(doubleFormat.format(
+                    meanNormalization(customerValues.get(customerId).getValue1().get(2), mMean, maxPrice, minPrice)));
             RFMMap.put(customerId, new ArrayList<>());
             RFMMap.get(customerId).add(RScore);
             RFMMap.get(customerId).add(FScore);
             RFMMap.get(customerId).add(MScore);
         }
     }
-    public void createRFMInstance() {
+    public Instances createRFMInstance() {
+        Instances RFMTable = new Instances("RFMTable", new ArrayList<>(), RFMMap.size());
         RFMTable.insertAttributeAt(new Attribute("CustomerID", false), 0);
         RFMTable.insertAttributeAt(new Attribute("Recency"), 1);
         RFMTable.insertAttributeAt(new Attribute("Frequency"), 2);
@@ -169,18 +186,41 @@ public class RFM {
             System.out.println("Couldn't write data to " + outputFile);
             e.printStackTrace();
         }
+        return RFMTable;
     }
 
-    // Constructor
-    public RFM() throws Exception {
-        generateInvoiceMap();
-        generateCustomerValues();
-        Integer[] extremeValues = generateRFMLists();
-        generateRFMMap(extremeValues);
+
+    // Supporting functions
+    public Attribute[] getAttributesList() {
+        Attribute[] attributeList = new Attribute[numberOfAttributes];
+        Instance exampleInst = cleanedData.firstInstance();
+        for (int i = 0; i < numberOfAttributes; i++) {
+            Attribute attribute = exampleInst.attributeSparse(i);
+            attributeList[i] = attribute;
+        }
+        return attributeList;
+    }
+    public int daysFromLatestDate(Date invoiceDate) {
+        long daysFromLatest = Math.abs(latestDate.getTime() - invoiceDate.getTime());
+        return (int) TimeUnit.MILLISECONDS.toDays(daysFromLatest);
     }
 
+
+    // Normalization Methods
+    public int minMaxNormalization(int curValue, int maxValue, int minValue) {
+        int a = 1, b = 10, score;
+        score = a + ((curValue - minValue)*(b-a))/(maxValue-minValue);
+        return score;
+    }
+    public double meanNormalization(double curValue, double sampleMean, double maxValue, double minValue) {
+        return (curValue - sampleMean)/maxValue-minValue;
+    }
+
+
+    // Test function main()
     public static void main(String[] args) throws Exception {
         RFM test = new RFM();
-        test.createRFMInstance();
+        Instances rfm = test.createRFMInstance();
+        System.out.println(rfm.toString());
     }
 }
