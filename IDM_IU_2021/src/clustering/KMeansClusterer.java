@@ -33,9 +33,6 @@ public class KMeansClusterer {
         arffLoader.setFile(new File("IDM_IU_2021/data/rfmTable.arff"));
         rfm = arffLoader.getDataSet();
 
-        System.out.println(attributes);
-        System.out.println(rfmCut.size());
-        System.out.println(rfm.size());
     }
 
     private void initAttributes(){
@@ -109,9 +106,9 @@ public class KMeansClusterer {
     }
     private void calculateCluster(){
         // from the final centroid --> calculate the cluster again --> export to the new data set of CustID and Clustered
-        EuclideanDistance EucDistance = new EuclideanDistance();
-        EucDistance.setDontNormalize(true);
-        EucDistance.setInstances(rfmCut);
+//        EuclideanDistance EucDistance = new EuclideanDistance();
+//        EucDistance.setDontNormalize(true);
+//        EucDistance.setInstances(rfmCut);
         attributes=new ArrayList<>();
         attributes.add(new Attribute("CustId"));
         attributes.add(new Attribute("Cluster"));
