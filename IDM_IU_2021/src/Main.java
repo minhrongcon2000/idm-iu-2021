@@ -22,5 +22,9 @@ public class Main {
         System.out.println(evaluation.toSummaryString());
         System.out.println(evaluation.toClassDetailsString());
         System.out.println(Arrays.deepToString(evaluation.confusionMatrix()));
+
+        // call this to cluster
+//        KMeansClusterer kMeansClusterer=new KMeansClusterer();
+//        kMeansClusterer.buildCluster();
     }
 }
