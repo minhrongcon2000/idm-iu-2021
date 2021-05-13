@@ -1,6 +1,6 @@
 @relation rfm
 
-@attribute CustomerID string
+@attribute CustomerID numeric
 @attribute r numeric
 @attribute f numeric
 @attribute m numeric
