@@ -1,3 +1,5 @@
+package clustering;
+
 import weka.clusterers.EM;
 import weka.clusterers.SimpleKMeans;
 import weka.core.*;

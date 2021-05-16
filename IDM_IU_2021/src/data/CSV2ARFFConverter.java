@@ -1,6 +1,7 @@
 package data;
 
 import com.opencsv.CSVReader;
+import com.opencsv.exceptions.CsvValidationException;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
@@ -63,7 +64,7 @@ public class CSV2ARFFConverter implements iConverter {
         this.numOfAttr = attr.size();
     }
 
-    public void isDataAttributeConsistent() throws IOException, ConfigDataInconsistentException {
+    public void isDataAttributeConsistent() throws IOException, ConfigDataInconsistentException, CsvValidationException {
         CSVReader csvReader = new CSVReader(new FileReader(sourcePath));
         String[] nextRecord;
         //Skip column names
@@ -100,7 +101,7 @@ public class CSV2ARFFConverter implements iConverter {
     }
 
     public void convert() throws ConfigDataInconsistentException,
-            IOException, org.json.simple.parser.ParseException, ParseException {
+            IOException, org.json.simple.parser.ParseException, ParseException, CsvValidationException {
         isDataAttributeConsistent();
         CSVReader reader = new CSVReader(new FileReader(sourcePath));
         BufferedWriter bw = new BufferedWriter(new FileWriter(desPath));

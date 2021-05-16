@@ -20,4 +20,12 @@ public class FPTree extends AbstractAssociator implements IFPTree {
     public void buildAssociations(Instances instances) {
         // TODO: code for constructing FPTree goes here
     }
+
+    class Node {
+        int name;
+        int count;
+        Node parent;
+        Node next;
+        List<Node> children;
+    }
 }

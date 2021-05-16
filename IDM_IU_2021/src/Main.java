@@ -1,29 +1,34 @@
-import classifier.PredictiveFPTree;
-import weka.classifiers.Evaluation;
+import arm.FPGrowthAssociation;
+import weka.associations.FPGrowth;
 import weka.core.Instances;
 import weka.core.converters.ArffLoader;
 
 import java.io.File;
-import java.util.Arrays;
-import java.util.Random;
 
 public class Main {
     public static void main(String[] args) throws Exception {
         ArffLoader dataLoader = new ArffLoader();
-        dataLoader.setSource(new File("/Users/HoangMinh/Desktop/demo/demo.arff"));
+        dataLoader.setSource(new File("IDM_IU_2021/data/data.arff"));
         Instances data = dataLoader.getDataSet();
-        data.setClassIndex(0);
+        dataLoader.setSource(new File("IDM_IU_2021/data/Clustered.arff"));
+        Instances clusters = dataLoader.getDataSet();
 
-        PredictiveFPTree tree = new PredictiveFPTree();
+        var fpg = new FPGrowthAssociation(data, clusters);
+        fpg.rulesForCluster(0);
+//        data.setClassIndex(0);
 
-        Evaluation evaluation = new Evaluation(data);
-        evaluation.crossValidateModel(tree, data, 10, new Random(43));
+//        PredictiveFPTree tree = new PredictiveFPTree();
+//
+//        Evaluation evaluation = new Evaluation(data);
+//        evaluation.crossValidateModel(tree, data, 10, new Random(43));
 
-        System.out.println(evaluation.toSummaryString());
-        System.out.println(evaluation.toClassDetailsString());
-        System.out.println(Arrays.deepToString(evaluation.confusionMatrix()));
 
-        // call this to cluster
+
+//        System.out.println(evaluation.toSummaryString());
+//        System.out.println(evaluation.toClassDetailsString());
+//        System.out.println(Arrays.deepToString(evaluation.confusionMatrix()));
+//
+//        // call this to cluster
 //        KMeansClusterer kMeansClusterer=new KMeansClusterer();
 //        kMeansClusterer.buildCluster();
     }
