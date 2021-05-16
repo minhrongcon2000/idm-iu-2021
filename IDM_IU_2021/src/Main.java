@@ -14,7 +14,7 @@ public class Main {
         Instances clusters = dataLoader.getDataSet();
 
         var fpg = new FPGrowthAssociation(data, clusters);
-        fpg.rulesForCluster(0);
+        fpg.displayAssociationRules();
 //        data.setClassIndex(0);
 
 //        PredictiveFPTree tree = new PredictiveFPTree();
