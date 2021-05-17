@@ -1,27 +1,14 @@
-import arm.FPGrowthAssociation;
-import arm.FPTree;
-import weka.associations.FPGrowth;
-import weka.core.Instances;
-import weka.core.converters.ArffLoader;
-
-import java.io.File;
+import arm.fpgrowth.FPDemo;
 
 public class Main {
     public static void main(String[] args) throws Exception {
-        ArffLoader dataLoader = new ArffLoader();
-        dataLoader.setSource(new File("IDM_IU_2021/data/vote.arff"));
-        Instances data = dataLoader.getDataSet();
-
-        var fpg = new FPTree();
-        fpg.buildAssociations(data);
-        fpg.printResult(3);
+        new FPDemo();
 //        data.setClassIndex(0);
 
 //        PredictiveFPTree tree = new PredictiveFPTree();
 //
 //        Evaluation evaluation = new Evaluation(data);
 //        evaluation.crossValidateModel(tree, data, 10, new Random(43));
-
 
 
 //        System.out.println(evaluation.toSummaryString());

@@ -1,6 +1,6 @@
 package classifier;
 
-import arm.FPTree;
+import arm.fpgrowth.FPTree;
 import arm.IConditionalItem;
 import arm.IFPTree;
 import arm.IRule;

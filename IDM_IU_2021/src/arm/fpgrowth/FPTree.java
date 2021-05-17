@@ -1,5 +1,7 @@
-package arm;
+package arm.fpgrowth;
 
+import arm.IFPTree;
+import arm.IRule;
 import weka.associations.AbstractAssociator;
 import weka.core.Instances;
 
@@ -7,48 +9,78 @@ import java.util.*;
 import java.util.Map.Entry;
 
 public class FPTree extends AbstractAssociator implements IFPTree {
+    public FPTree() {
+        this(new FPOptions());
+    }
+
+    public FPTree(FPOptions options) {
+        this.options = options;
+    }
 
     @Override
     public List<IRule> getAssociationRules() {
-        var res = new ArrayList<IRule>();
-        for (var entry : frequentMap.entrySet()) {
-
-        }
-        return res;
+        var rules = new ArrayList<IRule>();
+        getFrequentItemSets().forEach((itemSet, support) -> {
+            if (itemSet.size() >= options.getMinItemSetLen()) {
+                var subsets = generateAllSubsets(itemSet);
+                subsets.removeIf(Set::isEmpty);
+                subsets.removeIf(set -> set.containsAll(itemSet));
+                subsets.forEach(ss -> {
+                    var confidence = (double) support / (double) supportCount(ss);
+                    if (confidence >= options.getMinConfidence()) {
+                        var diffSet = setDifference(itemSet, ss);
+                        rules.add(new FPRule(ss, supportCount(ss), diffSet, supportCount(diffSet), confidence));
+                    }
+                });
+            }
+        });
+        return rules;
     }
 
     @Override
     public void buildAssociations(Instances instances) {
 //        if (instances.classIndex() >= 0) instances.deleteAttributeAt(instances.classIndex());
 //        instances.deleteAttributeAt(instances.numAttributes() - 1);
-        List<List<String>> transactions = new ArrayList<>();
         var attributes = Collections.list(instances.enumerateAttributes());
         var iter = instances.enumerateInstances();
         while (iter.hasMoreElements()) {
             var transaction = new ArrayList<String>();
             var instance = iter.nextElement();
             attributes.forEach(attr -> {
-                transaction.add(String.format("%s=%s", attr.name(), instance.stringValue(attr)));
+                var val = instance.stringValue(attr);
+                if (val.equalsIgnoreCase(options.getPositiveLabel()))
+                    transaction.add(String.format("%s=%s", attr.name(), val));
             });
             transactions.add(transaction);
         }
         FPGrowthAlgorithm(transactions);
     }
 
-    public void printResult(int minLength) {
-        System.out.println(String.format("FP Growth found %d rules: ", frequentMap.size()));
+    public Map<Set<String>, Integer> getFrequentItemSets() {
+        var res = new HashMap<Set<String>, Integer>();
+        for (var entry : this.frequentMap.entrySet()) {
+            if (entry.getValue() > options.getMinItemSetSupport()) {
+                res.put(entry.getKey(), entry.getValue());
+            }
+        }
+        return res;
+    }
+
+    public void printFrequentItemSets() {
+        System.out.printf("FP Growth found %d item sets: %n", frequentMap.size());
         int count = 0;
-        for (Entry<List<String>, Integer> entry : this.frequentMap.entrySet()) {
-            List<String> rule = entry.getKey();
-            if (rule.size() >= minLength) continue;
+        for (var entry : this.frequentMap.entrySet()) {
+            Set<String> rule = entry.getKey();
+            if (rule.size() < options.getMinItemSetLen()) continue;
             Integer support = entry.getValue();
-            System.out.println(String.format("%d. %s => %d", count++, rule, support));
+            System.out.printf("%d. %s => %d%n", count++, rule, support);
         }
     }
 
     FPNode root;
-    int min_sup = 100;
-    private Map<List<String>, Integer> frequentMap = new HashMap<List<String>, Integer>();
+    FPOptions options;
+    List<List<String>> transactions = new ArrayList<>();
+    Map<Set<String>, Integer> frequentMap = new HashMap<Set<String>, Integer>();
 
     public void FPGrowthAlgorithm(List<List<String>> transactions) {
         //-- This is the first Data Scan
@@ -79,12 +111,12 @@ public class FPTree extends AbstractAssociator implements IFPTree {
             String itemName = entry.getKey();
             Integer count = entry.getValue();
 
-            //check the min_support
-//            if (count >= this.min_sup) {
-            FPNode node = new FPNode(itemName);
-            node.support = count;
-            headerTable.put(itemName, node);
-//            }
+//            check the min_support
+            if (count >= options.getMinSup()) {
+                FPNode node = new FPNode(itemName);
+                node.support = count;
+                headerTable.put(itemName, node);
+            }
         }
 
         FPNode root = buildTree(transactions, itemCount, headerTable);
@@ -108,7 +140,7 @@ public class FPTree extends AbstractAssociator implements IFPTree {
 
             for (List<FPNode> combine : combinations) {
                 int supp = 0;
-                List<String> rule = new ArrayList<>();
+                Set<String> rule = new HashSet<>();
                 for (FPNode node : combine) {
                     rule.add(node.itemName);
                     supp = node.support;
@@ -125,7 +157,7 @@ public class FPTree extends AbstractAssociator implements IFPTree {
 
         for (FPNode header : headerTable.values()) {
 
-            List<String> rule = new ArrayList<>();
+            Set<String> rule = new HashSet<>();
             rule.add(header.itemName);// header is item >= min_support
 
             if (postModel != null) {
@@ -243,81 +275,38 @@ public class FPTree extends AbstractAssociator implements IFPTree {
         return itemCount;
     }
 
-    class FPNode {
+    <T> Set<Set<T>> generateAllSubsets(Set<T> original) {
+        Set<Set<T>> allSubsets = new HashSet<Set<T>>();
 
-        int support;
-        String itemName;
-        HashMap<String, FPNode> children;
-        FPNode next; //use for header table
-        FPNode parent;
+        allSubsets.add(new HashSet<T>()); //Add empty set.
 
-        public FPNode(String name) {
-            this.itemName = name;
-            this.support = 1;
-            this.children = new HashMap<String, FPNode>();
-            this.next = null;
-            this.parent = null;
-        }
+        for (T element : original) {
+            // Copy subsets so we can iterate over them without ConcurrentModificationException
+            Set<Set<T>> tempClone = new HashSet<Set<T>>(allSubsets);
 
-        @Override
-        public String toString() {
-            return "FPNode [support=" + support + ", itemName=" + itemName + "]";
-        }
-
-        public void attach(FPNode t) {
-            FPNode node = this;
-            while (node.next != null) {
-                node = node.next;
+            // All element to all subsets of the current power set.
+            for (Set<T> subset : tempClone) {
+                Set<T> extended = new HashSet<T>(subset);
+                extended.add(element);
+                allSubsets.add(extended);
             }
-            node.next = t;
         }
+
+        return allSubsets;
     }
 
-    class FPRule implements IRule {
-        List<String> pattern;
-        int frequency;
-
-        public FPRule(List<String> pattern, int frequency) {
-            this.pattern = pattern;
-            this.frequency = frequency;
-        }
-
-        @Override
-        public List<IConditionalItem> getPremise() {
-            List<IConditionalItem> res = new ArrayList<>();
-            for (var p : pattern) {
-                var tmp = p.split("=");
-                var a = tmp[0];
-                var b = "";
-                if (tmp.length > 1) b = tmp[1];
-                res.add(new FPConditionalItem(a, b));
-            }
-            return res;
-        }
-
-        @Override
-        public List<IConditionalItem> getConsequences() {
-            return Arrays.asList(new FPConditionalItem("frequency", String.valueOf(frequency)));
-        }
+    <T> Set<T> setDifference(Set<T> minuend, Set<T> substrahend) {
+        var diffSet = new HashSet<T>(minuend);
+        diffSet.removeAll(substrahend);
+        return diffSet;
     }
 
-    class FPConditionalItem implements IConditionalItem {
-        String name;
-        String value;
-
-        public FPConditionalItem(String name, String value) {
-            this.name = name;
-            this.value = value;
+    int supportCount(Set<String> target) {
+        int count = 0;
+        for (var transaction : transactions) {
+            var items = new HashSet<>(transaction);
+            if (items.containsAll(target)) count++;
         }
-
-        @Override
-        public String getItemName() {
-            return this.name;
-        }
-
-        @Override
-        public String getItemValue() {
-            return this.value;
-        }
+        return count;
     }
 }
