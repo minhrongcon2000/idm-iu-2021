@@ -33,10 +33,8 @@ public class FPGrowthAssociation {
 
     public AssociationRules rulesForCluster(int cluster_index) throws Exception {
         var fpg = new FPGrowth();
-//        fpg.buildAssociations(preProcessDataForFPGrowth(dataByCluster((cluster_index))));
-//        return fpg.getAssociationRules();
-        var x = preProcessDataForFPGrowth(dataByCluster((cluster_index)));
-        return null;
+        fpg.buildAssociations(dataByCluster((cluster_index)));
+        return fpg.getAssociationRules();
     }
 
     public Instances dataByCluster(int cluster_index) {
@@ -51,17 +49,6 @@ public class FPGrowthAssociation {
             if (cusInCluster.contains(cusId)) clusterInstances.add(row);
         }
         return clusterInstances;
-    }
-
-    Instances preProcessDataForFPGrowth(Instances instances) {
-        List<String> removeCols = Arrays.asList("InvoiceNo", "StockCode", "Description", "InvoiceDate", "CustomerID");
-        for (var col: removeCols) {
-            var attr = instances.attribute(col);
-            instances.deleteAttributeAt(attr.index());
-        }
-
-        // TODO: Convert to binary, 2 numeric columns and 1 nominal columns
-        return instances;
     }
 
     public void displayAssociationRules() throws Exception {

@@ -1,4 +1,5 @@
 import arm.FPGrowthAssociation;
+import arm.FPTree;
 import weka.associations.FPGrowth;
 import weka.core.Instances;
 import weka.core.converters.ArffLoader;
@@ -8,13 +9,12 @@ import java.io.File;
 public class Main {
     public static void main(String[] args) throws Exception {
         ArffLoader dataLoader = new ArffLoader();
-        dataLoader.setSource(new File("IDM_IU_2021/data/data.arff"));
+        dataLoader.setSource(new File("IDM_IU_2021/data/vote.arff"));
         Instances data = dataLoader.getDataSet();
-        dataLoader.setSource(new File("IDM_IU_2021/data/Clustered.arff"));
-        Instances clusters = dataLoader.getDataSet();
 
-        var fpg = new FPGrowthAssociation(data, clusters);
-        fpg.displayAssociationRules();
+        var fpg = new FPTree();
+        fpg.buildAssociations(data);
+        fpg.printResult(3);
 //        data.setClassIndex(0);
 
 //        PredictiveFPTree tree = new PredictiveFPTree();
