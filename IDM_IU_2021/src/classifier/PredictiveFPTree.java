@@ -1,9 +1,6 @@
 package classifier;
 
-import arm.FPTree;
-import arm.IConditionalItem;
-import arm.IFPTree;
-import arm.IRule;
+import arm.*;
 import weka.classifiers.AbstractClassifier;
 import weka.classifiers.rules.ZeroR;
 import weka.core.Attribute;
@@ -13,13 +10,14 @@ import weka.core.Instances;
 import java.util.List;
 
 public class PredictiveFPTree extends AbstractClassifier {
-    private final FPTree tree;
+    private FPTree tree;
+    private final FPOptions options;
     private final ZeroR zeroRule;
     private Attribute classAttribute;
 
     public PredictiveFPTree() {
-        tree = new FPTree();
         zeroRule = new ZeroR();
+        options = new FPOptions();
     }
 
     private static int getAttributeIndex(Instance data, String attributeName) {
@@ -61,6 +59,7 @@ public class PredictiveFPTree extends AbstractClassifier {
     public void buildClassifier(Instances instances) throws Exception {
         int classIdx = instances.classIndex();
         this.classAttribute = instances.classAttribute();
+        tree = new FPTree(options);
 
         // remove class index in order to build FP tree
         instances.setClassIndex(-1);
@@ -86,5 +85,21 @@ public class PredictiveFPTree extends AbstractClassifier {
             return zeroRule.distributionForInstance(instance);
         }
         return distribution;
+    }
+
+    public void setMinConfidence(double confidence) {
+        options.setMinConfidence(confidence);
+    }
+
+    public void setPositiveLabel(String positiveLabel) {
+        options.setPositiveLabel(positiveLabel);
+    }
+
+    public void setMinItemSetLen(int minItemSupport) {
+        options.setMinItemSetLen(minItemSupport);
+    }
+
+    public void setMinSup(int minSup) {
+        options.setMinSup(minSup);
     }
 }

@@ -1,0 +1,74 @@
+[
+    {
+        "name": "InvoiceNo",
+        "type": "string"
+    },
+    {
+        "name": "StockCode",
+        "type": "string"
+    },
+    {
+        "name": "Description",
+        "type": "string"
+    },
+    {
+        "name": "Quantity",
+        "type": "numeric"
+    },
+    {
+        "name": "InvoiceDate",
+        "type": "date"
+    },
+    {
+        "name": "UnitPrice",
+        "type": "numeric"
+    },
+    {
+        "name": "CustomerID",
+        "type": "string"
+    },
+    {
+        "name": "Country",
+        "type": "nominal",
+        "labels": [
+            "United Kingdom",
+            "France",
+            "Australia",
+            "Netherlands",
+            "Germany",
+            "Norway",
+            "EIRE",
+            "Switzerland",
+            "Spain",
+            "Poland",
+            "Portugal",
+            "Italy",
+            "Belgium",
+            "Lithuania",
+            "Japan",
+            "Iceland",
+            "Channel Islands",
+            "Denmark",
+            "Cyprus",
+            "Sweden",
+            "Austria",
+            "Israel",
+            "Finland",
+            "Bahrain",
+            "Greece",
+            "Hong Kong",
+            "Singapore",
+            "Lebanon",
+            "United Arab Emirates",
+            "Saudi Arabia",
+            "Czech Republic",
+            "Canada",
+            "Unspecified",
+            "Brazil",
+            "USA",
+            "European Community",
+            "Malta",
+            "RSA"
+        ]
+    }
+]
