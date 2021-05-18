@@ -1,7 +1,4 @@
-package arm.fpgrowth;
-
-import arm.IConditionalItem;
-import arm.IRule;
+package arm;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -23,11 +20,11 @@ public class FPRule implements IRule {
         this.confidence = confidence;
     }
 
-    void addRulePart(Set<String> itemSet, List<IConditionalItem> target) {
+    private static void addRulePart(Set<String> itemSet, List<IConditionalItem> target) {
         itemSet.forEach(item -> {
-            var components = item.split("=");
-            var attr = components[0];
-            var val = components[1];
+            String[] components = item.split("=");
+            String attr = components[0];
+            String val = components[1];
             target.add(new FPConditionalItem(attr, val));
         });
     }

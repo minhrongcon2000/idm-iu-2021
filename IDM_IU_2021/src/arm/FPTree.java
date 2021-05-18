@@ -1,14 +1,17 @@
-package arm.fpgrowth;
+package arm;
 
-import arm.IFPTree;
-import arm.IRule;
 import weka.associations.AbstractAssociator;
+import weka.core.Attribute;
+import weka.core.Instance;
 import weka.core.Instances;
 
 import java.util.*;
 import java.util.Map.Entry;
 
 public class FPTree extends AbstractAssociator implements IFPTree {
+    private final FPOptions options;
+    private final List<List<String>> transactions = new ArrayList<>();
+    private final Map<Set<String>, Integer> frequentMap = new HashMap<>();
     public FPTree() {
         this(new FPOptions());
     }
@@ -19,16 +22,16 @@ public class FPTree extends AbstractAssociator implements IFPTree {
 
     @Override
     public List<IRule> getAssociationRules() {
-        var rules = new ArrayList<IRule>();
+        List<IRule> rules = new ArrayList<>();
         getFrequentItemSets().forEach((itemSet, support) -> {
             if (itemSet.size() >= options.getMinItemSetLen()) {
-                var subsets = generateAllSubsets(itemSet);
+                Set<Set<String>> subsets = generateAllSubsets(itemSet);
                 subsets.removeIf(Set::isEmpty);
                 subsets.removeIf(set -> set.containsAll(itemSet));
                 subsets.forEach(ss -> {
-                    var confidence = (double) support / (double) supportCount(ss);
+                    double confidence = (double) support / (double) supportCount(ss);
                     if (confidence >= options.getMinConfidence()) {
-                        var diffSet = setDifference(itemSet, ss);
+                        Set<String> diffSet = setDifference(itemSet, ss);
                         rules.add(new FPRule(ss, supportCount(ss), diffSet, supportCount(diffSet), confidence));
                     }
                 });
@@ -41,13 +44,13 @@ public class FPTree extends AbstractAssociator implements IFPTree {
     public void buildAssociations(Instances instances) {
 //        if (instances.classIndex() >= 0) instances.deleteAttributeAt(instances.classIndex());
 //        instances.deleteAttributeAt(instances.numAttributes() - 1);
-        var attributes = Collections.list(instances.enumerateAttributes());
-        var iter = instances.enumerateInstances();
+        List<Attribute> attributes = Collections.list(instances.enumerateAttributes());
+        Enumeration<Instance> iter = instances.enumerateInstances();
         while (iter.hasMoreElements()) {
-            var transaction = new ArrayList<String>();
-            var instance = iter.nextElement();
+            List<String> transaction = new ArrayList<>();
+            Instance instance = iter.nextElement();
             attributes.forEach(attr -> {
-                var val = instance.stringValue(attr);
+                String val = instance.stringValue(attr);
                 if (val.equalsIgnoreCase(options.getPositiveLabel()))
                     transaction.add(String.format("%s=%s", attr.name(), val));
             });
@@ -57,8 +60,8 @@ public class FPTree extends AbstractAssociator implements IFPTree {
     }
 
     public Map<Set<String>, Integer> getFrequentItemSets() {
-        var res = new HashMap<Set<String>, Integer>();
-        for (var entry : this.frequentMap.entrySet()) {
+        HashMap<Set<String>, Integer> res = new HashMap<>();
+        for (Entry<Set<String>, Integer> entry : this.frequentMap.entrySet()) {
             if (entry.getValue() > options.getMinItemSetSupport()) {
                 res.put(entry.getKey(), entry.getValue());
             }
@@ -69,7 +72,7 @@ public class FPTree extends AbstractAssociator implements IFPTree {
     public void printFrequentItemSets() {
         System.out.printf("FP Growth found %d item sets: %n", frequentMap.size());
         int count = 0;
-        for (var entry : this.frequentMap.entrySet()) {
+        for (Entry<Set<String>, Integer> entry : this.frequentMap.entrySet()) {
             Set<String> rule = entry.getKey();
             if (rule.size() < options.getMinItemSetLen()) continue;
             Integer support = entry.getValue();
@@ -77,24 +80,18 @@ public class FPTree extends AbstractAssociator implements IFPTree {
         }
     }
 
-    FPNode root;
-    FPOptions options;
-    List<List<String>> transactions = new ArrayList<>();
-    Map<Set<String>, Integer> frequentMap = new HashMap<Set<String>, Integer>();
+
 
     public void FPGrowthAlgorithm(List<List<String>> transactions) {
         //-- This is the first Data Scan
         HashMap<String, Integer> itemCount = getFreqCount(transactions);
         //Sort items according to itemCount
         for (List<String> transaction : transactions) {
-            Collections.sort(transaction, new Comparator<String>() {
-                @Override
-                public int compare(String o1, String o2) {
-                    // TODO Auto-generated method stub
-                    if (itemCount.get(o1) > itemCount.get(o2)) return -1;
-                    else if (itemCount.get(o1) < itemCount.get(o2)) return 1;
-                    return 0;
-                }
+            transaction.sort((o1, o2) -> {
+                // TODO Auto-generated method stub
+                if (itemCount.get(o1) > itemCount.get(o2)) return -1;
+                else if (itemCount.get(o1) < itemCount.get(o2)) return 1;
+                return 0;
             });
         }
 
@@ -120,8 +117,6 @@ public class FPTree extends AbstractAssociator implements IFPTree {
         }
 
         FPNode root = buildTree(transactions, itemCount, headerTable);
-
-        if (root == null) return;
 
         if (root.children == null || root.children.size() == 0) return;
 
@@ -276,7 +271,7 @@ public class FPTree extends AbstractAssociator implements IFPTree {
     }
 
     <T> Set<Set<T>> generateAllSubsets(Set<T> original) {
-        Set<Set<T>> allSubsets = new HashSet<Set<T>>();
+        Set<Set<T>> allSubsets = new HashSet<>();
 
         allSubsets.add(new HashSet<T>()); //Add empty set.
 
@@ -296,15 +291,15 @@ public class FPTree extends AbstractAssociator implements IFPTree {
     }
 
     <T> Set<T> setDifference(Set<T> minuend, Set<T> substrahend) {
-        var diffSet = new HashSet<T>(minuend);
+        HashSet<T> diffSet = new HashSet<T>(minuend);
         diffSet.removeAll(substrahend);
         return diffSet;
     }
 
     int supportCount(Set<String> target) {
         int count = 0;
-        for (var transaction : transactions) {
-            var items = new HashSet<>(transaction);
+        for (List<String> transaction : transactions) {
+            HashSet<String> items = new HashSet<>(transaction);
             if (items.containsAll(target)) count++;
         }
         return count;

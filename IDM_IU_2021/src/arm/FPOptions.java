@@ -1,6 +1,8 @@
-package arm.fpgrowth;
+package arm;
 
-public class FPOptions {
+import java.io.Serializable;
+
+public class FPOptions implements Serializable {
     // default options
     int minSup = 0;
     int minItemSetLen = 2;
@@ -46,9 +48,5 @@ public class FPOptions {
 
     public void setMinConfidence(double minConfidence) {
         this.minConfidence = minConfidence;
-    }
-
-    public FPOptions() {
-
     }
 }

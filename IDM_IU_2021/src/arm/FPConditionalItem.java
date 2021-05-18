@@ -1,4 +1,4 @@
-package arm.fpgrowth;
+package arm;
 
 import arm.IConditionalItem;
 

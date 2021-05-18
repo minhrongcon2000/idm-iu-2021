@@ -70,7 +70,7 @@ public class KMeansClusterer {
         // Cluster the centroids, return the final centroid
 
         for (int counter = 0; counter<kmeansClusters.size(); counter++){
-            var cluster=kmeansClusters.get(counter);
+            Instances cluster = kmeansClusters.get(counter);
             EM em = new EM();
             String option = "-I 100 -N -1 -X 10 -max -1 -ll-cv 1.0E-6 -ll-iter 1.0E-6 -M 1.0E-6 -K 10 -num-slots 1 -S 100";
             em.setOptions(weka.core.Utils.splitOptions(option));

@@ -1,4 +1,4 @@
-package arm.fpgrowth;
+package arm;
 
 import java.util.HashMap;
 
@@ -12,7 +12,7 @@ public class FPNode {
         public FPNode(String name) {
             this.itemName = name;
             this.support = 1;
-            this.children = new HashMap<String, FPNode>();
+            this.children = new HashMap<>();
             this.next = null;
             this.parent = null;
         }
