@@ -55,8 +55,8 @@ public class CSV2ARFFConverter implements iConverter {
     public void buildInputFormat() {
         this.timeInputFormat = new HashMap<>();
         timeInputFormat = new HashMap<>();
-        timeInputFormat.put("/", "dd/MM/yy HH:mm");
-        timeInputFormat.put("-", "dd-MM-yy HH:mm");
+        timeInputFormat.put("/", "MM/dd/yy HH:mm");
+        timeInputFormat.put("-", "MM-dd-yy HH:mm");
     }
 
     public void getAttrNum() throws org.json.simple.parser.ParseException, IOException {
